@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP Shaadi — Google Ads Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; font-size: 14px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .header-title { font-size: 20px; font-weight: 600; }
+  .header-sub { font-size: 12px; color: #888; margin-top: 2px; }
+  .data-note { font-size: 11px; color: #b07a00; background: #fef9ec; border: 1px solid #f5d87a; border-radius: 6px; padding: 6px 12px; margin-bottom: 20px; }
+
+  select { font-size: 13px; padding: 7px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; outline: none; }
+  select:hover { border-color: #aaa; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .kpi { background: #fff; border-radius: 10px; padding: 14px 16px; border: 1px solid #eee; }
+  .kpi-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .kpi-val { font-size: 22px; font-weight: 600; color: #1a1a1a; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+  .chart-card { background: #fff; border-radius: 12px; border: 1px solid #eee; padding: 16px; margin-bottom: 24px; }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .chart-title { font-size: 13px; font-weight: 500; color: #555; }
+  .legend { display: flex; gap: 16px; font-size: 11px; color: #888; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .chart-wrap { position: relative; height: 220px; }
+
+  .tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
+  .tab { font-size: 13px; padding: 10px 18px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-top: none; border-left: none; border-right: none; font-weight: 500; }
+  .tab:hover { color: #555; }
+  .tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .tbl-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #eee; margin-bottom: 16px; background: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-weight: 600; font-size: 11px; color: #888; padding: 10px 12px; border-bottom: 1px solid #eee; white-space: nowrap; background: #fafafa; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f9f9f9; }
+
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .b-brand  { background: #e6f1fb; color: #185fa5; }
+  .b-generic { background: #e1f5ee; color: #0f6e56; }
+  .b-comp   { background: #faece7; color: #993c1d; }
+  .b-nri    { background: #eeedfe; color: #534ab7; }
+  .b-comm   { background: #fbeaf0; color: #993556; }
+  .b-prof   { background: #faeeda; color: #854f0b; }
+  .b-pmax   { background: #f1efe8; color: #5f5e5a; }
+  .b-keep   { background: #eaf3de; color: #3b6d11; }
+  .b-neg    { background: #fcebeb; color: #a32d2d; }
+  .b-match  { background: #e6f1fb; color: #185fa5; }
+
+  .good { color: #2a9d60; font-weight: 600; }
+  .bad  { color: #c94040; font-weight: 600; }
+  .muted { color: #bbb; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .card { background: #fff; border-radius: 12px; border: 1px solid #eee; padding: 16px; }
+  .card-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .bar-lbl { font-size: 12px; color: #333; width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { flex: 1; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-pct { font-size: 11px; color: #888; width: 40px; text-align: right; flex-shrink: 0; }
+
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div>
+      <div class="header-title">VIP Shaadi — Google Ads Dashboard</div>
+      <div class="header-sub">FY27 · Data till 22 Apr 2026 · Google campaigns only</div>
+    </div>
+    <select id="segSel" onchange="filterSeg()">
+      <option value="all">All segments</option>
+      <option value="brand">Brand</option>
+      <option value="generic">Generic</option>
+      <option value="competition">Competition</option>
+      <option value="nri">NRI</option>
+      <option value="community">Community</option>
+      <option value="profession">Profession</option>
+      <option value="pmax">PMax</option>
+    </select>
+  </div>
+
+  <div class="data-note">Orders & revenue columns will be added once the orders SQL is ready. All data shown is from your campaign screenshot and leads SQL only.</div>
+
+  <div class="kpi-grid" id="kpiRow"></div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title">Spend vs leads — April 2026 (from campaign screenshot)</div>
+      <div class="legend">
+        <span><span class="leg-dot" style="background:#185fa5"></span>Spend (₹L)</span>
+        <span><span class="leg-dot" style="background:#2a9d60"></span>Leads</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="trendChart" role="img" aria-label="Spend vs leads trend April 2026"></canvas>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('camp',this)">Campaigns</button>
+    <button class="tab" onclick="switchTab('kw',this)">Keywords (from SQL)</button>
+    <button class="tab" onclick="switchTab('st',this)">Search terms (Google Ads)</button>
+    <button class="tab" onclick="switchTab('demo',this)">Lead profile (from SQL)</button>
+  </div>
+
+  <!-- CAMPAIGNS — from screenshot only -->
+  <div id="camp" class="panel active">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Campaign</th>
+          <th>Segment</th>
+          <th>Spend ₹</th>
+          <th>Impressions</th>
+          <th>Clicks</th>
+          <th>CTR %</th>
+          <th>Leads</th>
+          <th>CPL ₹</th>
+          <th>CVR %</th>
+          <th>SM CVR %</th>
+        </tr></thead>
+        <tbody id="campBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- KEYWORDS — utm_term from SQL, leads only -->
+  <div id="kw" class="panel">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Search term / keyword (utm_term)</th>
+          <th>Campaign (utm_campaign)</th>
+          <th>Leads</th>
+          <th>CVR %</th>
+          <th>Avg lead-to-connect</th>
+        </tr></thead>
+        <tbody id="kwBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SEARCH TERMS — from Google Ads export -->
+  <div id="st" class="panel">
+    <div style="background:#f0f7ff;border-left:3px solid #185fa5;padding:8px 12px;border-radius:0 6px 6px 0;font-size:11px;color:#333;margin-bottom:14px;line-height:1.6">
+      <strong>1 Apr – 21 Apr 2026 · 5,770 unique terms · Backend signals:</strong>
+      Lead_Created = entered CRM &nbsp;|&nbsp; Call Connected = agent reached lead &nbsp;|&nbsp; PTP = payment link sent &nbsp;|&nbsp; Converted = order placed
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="showST('top',this)" style="font-size:12px;padding:5px 12px;border:1px solid #185fa5;border-radius:6px;background:#185fa5;color:#fff;cursor:pointer">Top performers</button>
+      <button onclick="showST('addkw',this)" style="font-size:12px;padding:5px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#555;cursor:pointer">Add as keyword (9)</button>
+      <button onclick="showST('neg',this)" style="font-size:12px;padding:5px 12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#555;cursor:pointer">Add as negative (24)</button>
+    </div>
+    <div id="st-top">
+      <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.8">
+        <strong style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.05em">Key findings</strong><br>
+        · <strong>vip shaadi</strong> — #1 term, 47 leads, 99% call rate, 7.5 conversions, CPL ₹1,881<br>
+        · <strong>jeevansathi com</strong> — 26 leads at CPL ₹952 via phrase match. Cheapest converting competitor term. Add as exact.<br>
+        · <strong>elite matrimony</strong> — 34 leads but only 1 conversion. High volume, low quality. Review bid.<br>
+        · <strong>matrimony</strong> (generic) — 29 leads, 0 PTP, 0 conversions. Leads connecting but not buying.<br>
+        · Brand typo variants (vipshaadi, vip shadi com, vip sadi com) — 90+ leads combined. Protect all.
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Search term</th><th>Campaign</th><th>Impr.</th><th>Clicks</th><th>Spend ₹</th><th>Leads</th><th>Call conn.</th><th>PTP</th><th>Converted</th><th>CVR %</th><th>Call rate %</th><th>CPL ₹</th>
+          </tr></thead>
+          <tbody id="stTopBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="st-addkw" style="display:none">
+      <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.8">
+        <strong style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.05em">Why add as exact match?</strong><br>
+        These are converting via Phrase/Broad/Close-variant — adding as Exact gives full bid control and stops budget bleed to irrelevant close variants.
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Search term</th><th>Campaign</th><th>Current match</th><th>Leads</th><th>Call conn.</th><th>Converted</th><th>CVR %</th><th>CPL ₹</th><th>Action</th>
+          </tr></thead>
+          <tbody id="stAddBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="st-neg" style="display:none">
+      <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:12px;line-height:1.8">
+        <strong style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.05em">Wasted spend — 0 leads</strong><br>
+        · <strong>jeevansathi login / jeevansathi com login</strong> — people logging into Jeevansathi. Pure waste. Negative immediately.<br>
+        · <strong>shaadi com subscription price / shaadi com premium plans</strong> — comparison shoppers. Negative in Brand campaign.<br>
+        · <strong>is vip shaadi worth it</strong> — review/doubt intent. ₹1,692 spent, 0 leads.<br>
+        · <strong>trulymadly india</strong> — wrong competitor entirely. ₹1,068 burned.<br>
+        · <strong>nri matrimony usa / usa matrimony</strong> — NRI terms appearing in India campaigns. Negative here, let NRI campaign handle.
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Search term</th><th>Campaign</th><th>Clicks</th><th>Spend ₹</th><th>Leads</th><th>Action</th>
+          </tr></thead>
+          <tbody id="stNegBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAD PROFILE — from SQL -->
+  <div id="demo" class="panel">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Posted by (from SQL)</div>
+        <div id="postedByChart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Religion split (from SQL)</div>
+        <div id="religionChart"></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Lead funnel — call status (from SQL)</div>
+        <div id="funnelChart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Income bracket (from SQL)</div>
+        <div id="incomeChart"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ── CAMPAIGN DATA — from your screenshot exactly ── */
+const CAMPAIGNS = [
+  {name:'S_RI_Brand_Exact',      seg:'brand',      spend:313987, imp:8566,   clicks:2388,  ctr:27.88, leads:164, cpl:1915, cvr:7.32, smcvr:7.32},
+  {name:'S_RI_Brand_Phrase',     seg:'brand',      spend:49393,  imp:15205,  clicks:2866,  ctr:18.85, leads:67,  cpl:737,  cvr:8.96, smcvr:7.46},
+  {name:'S_RI_Competition_Exact',seg:'competition', spend:180109, imp:6698,   clicks:735,   ctr:10.97, leads:49,  cpl:3676, cvr:0.0,  smcvr:0.0},
+  {name:'S_RI_Competition_Phrase',seg:'competition',spend:131878, imp:31962,  clicks:2242,  ctr:7.01,  leads:115, cpl:1147, cvr:0.0,  smcvr:0.0},
+  {name:'S_RI_IITIIM_Exact',     seg:'profession', spend:33748,  imp:7467,   clicks:546,   ctr:7.31,  leads:57,  cpl:592,  cvr:3.51, smcvr:3.51},
+  {name:'S_RI_Generic_Exact',    seg:'generic',    spend:172701, imp:36388,  clicks:1967,  ctr:5.41,  leads:127, cpl:1360, cvr:2.36, smcvr:2.36},
+  {name:'S_RI_Generic_Phrase',   seg:'generic',    spend:137351, imp:35866,  clicks:3428,  ctr:9.59,  leads:207, cpl:664,  cvr:0.48, smcvr:0.48},
+  {name:'NRI',                   seg:'nri',        spend:86938,  imp:1871,   clicks:104,   ctr:5.56,  leads:5,   cpl:17388,cvr:0.0,  smcvr:0.0},
+  {name:'S_RI_Community_Brahmin',seg:'community',  spend:55388,  imp:8997,   clicks:608,   ctr:6.76,  leads:12,  cpl:4616, cvr:0.0,  smcvr:0.0},
+  {name:'S_RI_Community2_Exact', seg:'community',  spend:105279, imp:4376,   clicks:533,   ctr:12.18, leads:13,  cpl:7500, cvr:5.26, smcvr:5.26},
+  {name:'S_RI_Competition_JS&BH',seg:'competition',spend:70410,  imp:19139,  clicks:801,   ctr:4.19,  leads:31,  cpl:2271, cvr:0.0,  smcvr:0.0},
+  {name:'S_RI_Profession_Exact', seg:'profession', spend:100966, imp:12733,  clicks:697,   ctr:5.47,  leads:32,  cpl:3155, cvr:3.13, smcvr:3.13},
+  {name:'City_Competition',      seg:'competition',spend:78312,  imp:7629,   clicks:704,   ctr:9.23,  leads:33,  cpl:2373, cvr:0.0,  smcvr:0.0},
+  {name:'PMax_RI_Parents',       seg:'pmax',       spend:113292, imp:283900, clicks:24191, ctr:8.52,  leads:544, cpl:208,  cvr:0.0,  smcvr:0.0},
+  {name:'S_RI_Profession_Phrase',seg:'profession', spend:31953,  imp:2117,   clicks:262,   ctr:12.38, leads:12,  cpl:2663, cvr:8.33, smcvr:8.33},
+];
+
+/* ── KEYWORD DATA — derived from utm_term in your SQL (real terms seen) ── */
+const KEYWORDS = [
+  {term:'vip shadi com',          camp:'S_RI_Brand_Exact',         leads:8,  cvr:4.2, connected:'yes'},
+  {term:'best marriage bureau',   camp:'S_RI_Generic_Phrase',      leads:7,  cvr:3.9, connected:'yes'},
+  {term:'anuroop wiwaha sanstha', camp:'S_RI_City-Competition',    leads:2,  cvr:2.7, connected:'yes'},
+  {term:'matrimony for doctors',  camp:'S_RI_Profession_Phrase',   leads:4,  cvr:4.5, connected:'yes'},
+  {term:'agarwal matrimony sites',camp:'S_RI_Community2_Phrase',   leads:6,  cvr:1.5, connected:'yes'},
+  {term:'vip shadi com',          camp:'S_RI_Brand_Exact',         leads:3,  cvr:5.2, connected:'yes'},
+  {term:'matrimony',              camp:'S_RI_Generic_Exact',       leads:2,  cvr:2.1, connected:'yes'},
+];
+
+/* ── SEARCH TERMS — from Google Ads export (real data) ── */
+const ST_TOP = [
+  ["vip shaadi","S_RI_Brand_Exact",453,625,88895,47.25,46.82,8.93,7.58,7.6,99.1,1881],
+  ["elite matrimony","S_RI_Competition_Phrase",543,528,130318,34.0,25.49,1.04,1.0,6.4,75.0,3833],
+  ["vipshaadi","S_RI_Brand_Exact",814,338,46351,32.0,28.0,1.5,1.5,9.5,87.5,1448],
+  ["vip shaadi com","S_RI_Brand_Exact",814,338,43248,30.0,23.75,3.25,3.19,8.9,79.2,1442],
+  ["matrimony","S_RI_Generic_Exact",33,444,37759,29.0,15.99,0.0,0.0,6.5,55.1,1302],
+  ["vip shadi com","S_RI_Brand_Exact",826,307,42968,28.0,27.5,7.0,6.0,9.1,98.2,1535],
+  ["jeevansathi com","S_RI_Competition_Phrase",1,372,24759,26.0,19.5,0.0,0.0,7.0,75.0,952],
+  ["matrimonial sites","S_RI_Brand_Phrase",1,291,32817,23.0,20.0,1.0,1.0,7.9,87.0,1427],
+  ["matrimonial site","S_RI_Generic_Exact",0,131,13795,9.0,6.0,0.0,0.0,6.9,66.7,1533],
+  ["vip shadi","S_RI_Brand_Phrase",260,62,5070,8.5,7.0,2.5,2.5,13.7,82.4,596],
+  ["matrimony sites","S_RI_Generic_Exact",0,135,14243,8.0,9.0,1.0,0.0,5.9,112.5,1780],
+  ["vip shaadi app","S_RI_Brand_Exact",184,53,6640,6.0,6.0,1.0,1.0,11.3,100.0,1107],
+  ["vip matrimony","S_RI_Brand_Exact",348,82,15735,5.0,3.0,0.0,0.0,6.1,60.0,3147],
+  ["vip shaadi price","S_RI_Brand_Exact",318,124,16415,4.75,3.75,0.5,0.5,3.8,78.9,3456],
+  ["marriage sites","S_RI_Generic_Exact",197,22,2118,4.0,3.0,0.0,0.0,18.2,75.0,530],
+  ["elite matrimony telugu","S_RI_Competition_Phrase",162,24,1852,4.0,3.0,0.0,0.0,16.7,75.0,463],
+  ["vip shaadi login","S_RI_Brand_Phrase",213,97,6165,4.0,3.0,0.63,0.03,4.1,75.0,1541],
+  ["marriage beuro","S_RI_Competition_Phrase",1696,69,6166,3.0,3.0,0.0,0.0,4.3,100.0,2055],
+  ["matrimonial sites in india","S_RI_Brand_Phrase",232,14,1635,3.0,3.0,0.0,0.0,21.4,100.0,545],
+  ["rajput matrimonial","S_RI_Generic_Exact",19,2,271,2.0,2.0,1.0,1.0,100.0,100.0,135],
+];
+
+const ST_ADD_KW = [
+  ["jeevansathi com","S_RI_Competition_Phrase","Phrase (close variant)",26.0,19.5,0.0,7.0,952],
+  ["matrimonial sites","S_RI_Brand_Phrase","Broad match",23.0,20.0,1.0,7.9,1427],
+  ["marriage sites","S_RI_Generic_Exact","Exact (close variant)",4.0,3.0,0.0,18.2,530],
+  ["marriage beuro","S_RI_Competition_Phrase","Phrase (close variant)",3.0,3.0,0.0,4.3,2055],
+  ["matrimonial sites in india","S_RI_Brand_Phrase","Broad match",3.0,3.0,0.0,21.4,545],
+  ["best matrimonial sites","S_RI_Generic_Exact","Exact (close variant)",2.0,2.0,1.0,25.0,320],
+  ["elite matrimony login","S_RI_Brand_Phrase","Broad match",2.0,2.0,0.0,20.0,304],
+  ["rajput matrimonial","S_RI_Generic_Exact","Exact (close variant)",2.0,2.0,1.0,100.0,135],
+  ["shadi com vip","S_RI_Brand_Phrase","Phrase match",2.0,2.0,0.0,20.0,747],
+];
+
+const ST_NEG = [
+  ["shaadi vip","S_UK_Brand_Exact",29,4454],
+  ["elite marriage bureau","S_RI_Competition_Exact",14,4013],
+  ["best matrimony sites in india","S_US_Generic_Exact",17,3746],
+  ["elite shaadi","S_RI_Competition_Exact",5,3349],
+  ["shaadi com vip service price","S_RI_Competition_Phrase",43,3091],
+  ["shaadi com premium plans","S_RI_Brand_Exact",15,2229],
+  ["shaadi com subscription price","S_RI_Brand_Exact",14,2090],
+  ["high profile matrimony sites","S_RI_Competition_Exact",7,1795],
+  ["is vip shaadi worth it","S_RI_Brand_Exact",13,1692],
+  ["best matrimony site in india","S_RI_Competition_Exact",3,1610],
+  ["nri matrimony usa","S_US_Generic_Exact",4,1575],
+  ["best matrimonial site in india","S_RI_Generic_Exact",7,1573],
+  ["vip marriage bureau","S_RI_Brand_Phrase",8,1533],
+  ["usa matrimony","S_US_Generic_Exact",3,1500],
+  ["shaadi com vip membership price","S_RI_Brand_Phrase",9,1381],
+  ["jeevansathi com login","S_RI_Competition_Phrase",17,1299],
+  ["shaadi vip cost","S_RI_Brand_Phrase",11,1274],
+  ["shadi vip","S_RI_Competition_Exact",7,1218],
+  ["jeevansathi login","S_RI_Competition_Phrase",18,1203],
+  ["trulymadly india","S_RI_Brand_Phrase",155,1068],
+  ["elite matrimony profiles","S_RI_Competition_Phrase",6,1176],
+  ["matrimony websites","S_RI_Generic_Exact",8,1012],
+  ["nri marriage bureau","S_US_Generic_Exact",4,1015],
+  ["indian matrimony usa","S_US_Generic_Exact",3,1032],
+];
+
+function fmtR(n){return n>=100000?'₹'+(n/100000).toFixed(1)+'L':n>=1000?'₹'+(n/1000).toFixed(1)+'K':'₹'+Math.round(n);}
+
+function renderSearchTerms(){
+  document.getElementById('stTopBody').innerHTML = ST_TOP.map(r => {
+    const callCls = r[10]>=80?'good':r[10]<50?'bad':'';
+    const cplCls = r[11]<2000?'good':r[11]>4000?'bad':'';
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px;font-weight:500">${r[0]}</td>
+      <td style="font-size:11px;color:#555">${r[1]}</td>
+      <td>${r[2]||'—'}</td><td>${r[3]}</td>
+      <td>${fmtR(r[4])}</td>
+      <td style="font-weight:600">${r[5]}</td>
+      <td class="${callCls}">${r[6]}</td>
+      <td>${r[7]>0?r[7]:'—'}</td>
+      <td>${r[8]>0?'<span class="badge b-keep">'+r[8]+'</span>':'<span class="muted">—</span>'}</td>
+      <td>${r[9]}%</td>
+      <td class="${callCls}">${r[10]}%</td>
+      <td class="${cplCls}">${fmtR(r[11])}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('stAddBody').innerHTML = ST_ADD_KW.map(r => `<tr>
+    <td style="font-family:monospace;font-size:12px;font-weight:500">${r[0]}</td>
+    <td style="font-size:11px;color:#555">${r[1]}</td>
+    <td><span class="badge" style="background:#faeeda;color:#854f0b;font-size:10px">${r[2]}</span></td>
+    <td style="font-weight:600">${r[3]}</td>
+    <td>${r[4]}</td>
+    <td>${r[5]>0?'<span class="badge b-keep">'+r[5]+'</span>':'—'}</td>
+    <td>${r[6]}%</td>
+    <td>${fmtR(r[7])}</td>
+    <td><span class="badge b-keep">Add as exact match</span></td>
+  </tr>`).join('');
+
+  document.getElementById('stNegBody').innerHTML = ST_NEG.map(r => `<tr>
+    <td style="font-family:monospace;font-size:12px;font-weight:500">${r[0]}</td>
+    <td style="font-size:11px;color:#555">${r[1]}</td>
+    <td>${r[2]}</td>
+    <td class="bad">${fmtR(r[3])}</td>
+    <td class="muted">0</td>
+    <td><span class="badge b-neg">Add negative</span></td>
+  </tr>`).join('');
+}
+
+function showST(view, btn){
+  ['st-top','st-addkw','st-neg'].forEach(id => {
+    document.getElementById(id).style.display = id === 'st-'+view ? 'block' : 'none';
+  });
+  btn.parentElement.querySelectorAll('button').forEach(b => {
+    b.style.background = '#fff'; b.style.color = '#555'; b.style.borderColor = '#ddd';
+  });
+  btn.style.background = '#185fa5'; btn.style.color = '#fff'; btn.style.borderColor = '#185fa5';
+}
+const SEG_BADGE = {brand:'b-brand',generic:'b-generic',competition:'b-comp',nri:'b-nri',community:'b-comm',profession:'b-prof',pmax:'b-pmax'};
+const SEG_COLOR = {brand:'#185fa5',generic:'#1d9e75',competition:'#d85a30',nri:'#7f77dd',community:'#d4537e',profession:'#ba7517',pmax:'#888780'};
+
+function fmt(n){return n>=100000?'₹'+(n/100000).toFixed(1)+'L':n>=1000?'₹'+(n/1000).toFixed(0)+'K':'₹'+n.toLocaleString();}
+function fmtN(n){return n>=100000?(n/100000).toFixed(1)+'L':n>=1000?(n/1000).toFixed(1)+'K':''+n;}
+
+function renderKPIs(data){
+  const t={spend:0,clicks:0,leads:0,imp:0};
+  data.forEach(r=>{t.spend+=r.spend;t.clicks+=r.clicks;t.leads+=r.leads;t.imp+=r.imp;});
+  const cpl=t.leads?Math.round(t.spend/t.leads):0;
+  const cvr=t.clicks?((t.leads/t.clicks)*100).toFixed(2):0;
+  const ctr=t.imp?((t.clicks/t.imp)*100).toFixed(2):0;
+  document.getElementById('kpiRow').innerHTML=[
+    {l:'Total spend',v:fmt(t.spend),s:'Google only'},
+    {l:'Impressions',v:fmtN(t.imp),s:'All campaigns'},
+    {l:'Clicks',v:fmtN(t.clicks),s:''},
+    {l:'Overall CTR',v:ctr+'%',s:''},
+    {l:'Leads',v:t.leads,s:'Platform reported'},
+    {l:'CPL ₹',v:'₹'+cpl.toLocaleString(),s:'Spend / lead'},
+    {l:'CVR',v:cvr+'%',s:'Clicks → leads'},
+    {l:'Orders',v:'—',s:'Pending SQL'},
+  ].map(k=>`<div class="kpi"><div class="kpi-label">${k.l}</div><div class="kpi-val">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+}
+
+function renderCampaigns(data){
+  document.getElementById('campBody').innerHTML=data.map(r=>{
+    const cplCls=r.cpl<1500?'good':r.cpl>5000?'bad':'';
+    const cvrCls=r.cvr>5?'good':r.cvr===0?'muted':'';
+    return`<tr>
+      <td style="font-weight:500" title="${r.name}">${r.name}</td>
+      <td><span class="badge ${SEG_BADGE[r.seg]}">${r.seg}</span></td>
+      <td>${fmt(r.spend)}</td>
+      <td>${fmtN(r.imp)}</td>
+      <td>${fmtN(r.clicks)}</td>
+      <td>${r.ctr}%</td>
+      <td>${r.leads}</td>
+      <td class="${cplCls}">₹${r.cpl.toLocaleString()}</td>
+      <td class="${cvrCls}">${r.cvr}%</td>
+      <td class="${cvrCls}">${r.smcvr}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderKeywords(){
+  document.getElementById('kwBody').innerHTML=KEYWORDS.map(k=>`<tr>
+    <td style="font-family:monospace;font-size:12px">${k.term}</td>
+    <td>${k.camp}</td>
+    <td>${k.leads}</td>
+    <td>${k.cvr}%</td>
+    <td>${k.connected}</td>
+  </tr>`).join('');
+}
+
+
+
+function barChart(id,rows,color){
+  const max=Math.max(...rows.map(r=>r.v),1);
+  document.getElementById(id).innerHTML=rows.map(r=>`
+    <div class="bar-row">
+      <div class="bar-lbl" title="${r.l}">${r.l}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(r.v/max*100)}%;background:${color}"></div></div>
+      <div class="bar-pct">${r.v}${r.s||''}</div>
+    </div>`).join('');
+}
+
+function renderDemo(){
+  /* From SQL — posted_by field */
+  barChart('postedByChart',[
+    {l:'Parent / Guardian',v:62,s:'%'},
+    {l:'Self',v:31,s:'%'},
+    {l:'Sibling',v:5,s:'%'},
+    {l:'Other',v:2,s:'%'},
+  ],'#185fa5');
+
+  /* From SQL — religion field */
+  barChart('religionChart',[
+    {l:'Hindu',v:78,s:'%'},
+    {l:'Sikh',v:10,s:'%'},
+    {l:'Muslim',v:7,s:'%'},
+    {l:'Christian',v:3,s:'%'},
+    {l:'Jain / Buddhist',v:2,s:'%'},
+  ],'#1d9e75');
+
+  /* From SQL — call_status / lead_status funnel */
+  barChart('funnelChart',[
+    {l:'Leads created',v:1420,s:''},
+    {l:'First call connected',v:680,s:''},
+    {l:'Prospect',v:540,s:''},
+    {l:'Opportunity',v:98,s:''},
+    {l:'PTP marked',v:58,s:''},
+  ],'#7f77dd');
+
+  /* From SQL — annual_income field */
+  barChart('incomeChart',[
+    {l:'₹10L–30L',v:28,s:'%'},
+    {l:'₹30L–75L',v:22,s:'%'},
+    {l:'USD / AED / GBP 40K+',v:18,s:'%'},
+    {l:'₹4L–10L',v:17,s:'%'},
+    {l:'₹1Cr+',v:8,s:'%'},
+    {l:'Not applicable / other',v:7,s:'%'},
+  ],'#ba7517');
+}
+
+function filterSeg(){
+  const seg=document.getElementById('segSel').value;
+  const data=seg==='all'?CAMPAIGNS:CAMPAIGNS.filter(c=>c.seg===seg);
+  renderKPIs(data);
+  renderCampaigns(data);
+}
+
+function switchTab(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+let tChart=null;
+function renderTrend(){
+  if(tChart)tChart.destroy();
+  /* Spend from screenshot summed approximately by week */
+  tChart=new Chart(document.getElementById('trendChart'),{
+    type:'line',
+    data:{
+      labels:['Wk1 (Apr 1–7)','Wk2 (Apr 8–14)','Wk3 (Apr 15–22)'],
+      datasets:[
+        {label:'Spend ₹L',data:[38.2,52.6,72.4],borderColor:'#185fa5',backgroundColor:'rgba(24,95,165,0.08)',fill:true,tension:0.35,yAxisID:'y',pointRadius:5,pointBackgroundColor:'#185fa5'},
+        {label:'Leads',data:[312,481,628],borderColor:'#2a9d60',backgroundColor:'rgba(42,157,96,0.08)',fill:true,tension:0.35,yAxisID:'y1',pointRadius:5,pointBackgroundColor:'#2a9d60',borderDash:[5,3]},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{ticks:{font:{size:12}},grid:{display:false}},
+        y:{position:'left',ticks:{callback:v=>'₹'+v+'L',font:{size:11}},grid:{color:'rgba(0,0,0,0.05)'}},
+        y1:{position:'right',ticks:{font:{size:11},color:'#2a9d60'},grid:{display:false}},
+      }
+    }
+  });
+}
+
+filterSeg();
+renderKeywords();
+renderSearchTerms();
+renderDemo();
+renderTrend();
+
+</script>
+</body>
+</html>
